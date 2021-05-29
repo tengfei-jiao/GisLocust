@@ -1,6 +1,6 @@
 import json
 import time
-from locust import HttpUser, task, between, events, SequentialTaskSet
+from locust import HttpUser, task, between, events, SequentialTaskSet, tag
 from locust.runners import MasterRunner
 
 
@@ -49,10 +49,15 @@ class FlashUser(HttpUser):
     def on_start(self):
         self.client.post("/login", json={"username":"foo", "password":"bar"})
 
+    @tag("tag1")
     @task
     def hello_world(self):
         self.client.get("/hello")
 
+    # tag是标签，
+    # 场景1_执行tag1标记的任务：D:\GisLocust\locustfiles> locust -f locust_demo.py --tags tag1
+    # 场景2_执行非tag1标记的任务：D:\GisLocust\locustfiles> locust -f locust_demo.py --exclude-tags tag1
+    @tag("tag1", "tag2")
     @task(3)
     def view_items(self):
         for item_id in range(10):
