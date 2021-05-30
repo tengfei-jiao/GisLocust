@@ -2,6 +2,7 @@ import json
 import time
 from locust import HttpUser, task, between, events, SequentialTaskSet, tag
 from locust.runners import MasterRunner
+from locust.contrib.fasthttp import FastHttpUser
 
 
 # 请求：index
@@ -86,3 +87,23 @@ class FlashUser(HttpUser):
             time.sleep(1)
 
     tasks = [FlashTask]  # 要执行的任务是任务的类FlashTask，会有序执行该类下面的任务。
+
+
+# 大并发情况下：fasthttpuser每秒处理5000个请求，httpruner每秒处理800个请求
+class WebsiteUser(FastHttpUser):
+    host = "http://127.0.0.1:8089"
+    wait_time = between(2, 5)
+    # some things you can configure on FastHttpUser
+    # connection_timeout = 60.0
+    # insecure = True
+    # max_redirects = 5
+    # max_retries = 1
+    # network_timeout = 60.0
+
+    @task
+    def index(self):
+        self.client.get("/")
+
+    @task
+    def stats(self):
+        self.client.get("/stats/requests")
