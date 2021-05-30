@@ -4,22 +4,34 @@ from locust import HttpUser, task, between, events, SequentialTaskSet, tag
 from locust.runners import MasterRunner
 
 
+# 请求：index
 def index(l):
     l.client.get("/")
 
-
+# 请求：stats
 def stats(l):
     l.client.get("/stats/requests")
 
 
-# 场景1：任务执行 > login执行1次，addtitle执行10次
-class FlashTask(SequentialTaskSet):  # 该类定义了用户执行的任务的顺序。
+USER_CREDENTIALS = [
+    ("user1", "password"),
+    ("user2", "password"),
+    ("user3", "password"),
+]
+
+# （1）定义了要执行的请求有哪些 >>> 场景1：login执行1次，addtitle执行10次
+class FlashTask(SequentialTaskSet):  # 该类是TaskSet的子类，额外定义了执行请求的执行顺序，Sequential（有次序的）
+
+    # 用户开始请求前，调用一次测试前置：on_start
+    def on_start(self):
+        user, passw = USER_CREDENTIALS.pop()
+        self.client.post("/login", {"username": user, "password": passw})
 
     # 定义了一些特殊的请求
     tasks = [index, stats]
 
     token = None # 设置全局变量，login执行完成后，返回值给这里，供addtitle使用
-    @task(1) # 先执行登录，执行1次
+    @task(1) # 先执行登录，执行1次 ，使用@task装饰器会更方便
     def login(self):
         data = {"username": "developer", "password": "developer"}
         # 打开文件、写入数据、关闭文件，一般用语法with as >>> 节约资源，处理完请求后悔自动关闭。
@@ -37,7 +49,7 @@ class FlashTask(SequentialTaskSet):  # 该类定义了用户执行的任务的�
         with self.client.request(method='post', url='/prod-api/arctile', json=data, headers=headers) as response:
             print(response.text)
 
-
+# （2）定义了要发送请求的用户属性，例如：例如：要发送的网址、每次发送前后要做什么、第一个用户和第二个用户间隔时间、
 class FlashUser(HttpUser):
     host = "http://flash-admin.enilv.cn" # 设置要测的ip地址
     wait_time = between(1, 3) # 设置等待时间，1到3秒之内
@@ -57,9 +69,6 @@ class FlashUser(HttpUser):
     def on_test_stop(environment, **kwargs):
         print("A new test is ending")
 
-    # 用户开始请求前，调用一次测试前置：on_start
-    def on_start(self):
-        self.client.post("/login", json={"username":"foo", "password":"bar"})
 
     @tag("tag1")
     @task
