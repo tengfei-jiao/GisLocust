@@ -4,8 +4,20 @@ from locust import HttpUser, task, between, events, SequentialTaskSet, tag
 from locust.runners import MasterRunner
 
 
+def index(l):
+    l.client.get("/")
+
+
+def stats(l):
+    l.client.get("/stats/requests")
+
+
 # 场景1：任务执行 > login执行1次，addtitle执行10次
 class FlashTask(SequentialTaskSet):  # 该类定义了用户执行的任务的顺序。
+
+    # 定义了一些特殊的请求
+    tasks = [index, stats]
+
     token = None # 设置全局变量，login执行完成后，返回值给这里，供addtitle使用
     @task(1) # 先执行登录，执行1次
     def login(self):
